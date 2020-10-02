@@ -1,0 +1,3 @@
+package = CATKit
+version = 3.00
+bibtex = [@INPROCEEDINGS{Treible2017CVPR, author = {Wayne Treible, Philip Saponaro, Scott Sorensen, Abhishek Kolagunda, Michael O’Neal, Brian Phelan, Kelly Sherbondy, Chandra Kambhamettu}, title = {CATS: A Color and Thermal Stereo Benchmark}, booktitle = {Conference on Computer Vision and Pattern Recognition (CVPR)}, year = {2017}}]

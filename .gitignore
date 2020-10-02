@@ -1,0 +1,5 @@
+data/
+external/*
+sdk/scratch/*
+**/__pycache__/
+personal_access_token.txt
