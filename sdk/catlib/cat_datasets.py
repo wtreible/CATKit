@@ -7,13 +7,12 @@ from cat_utils import get_label_name_maps
 
 class SegmentationDataset(torch.utils.data.Dataset):
   'Segmentation Dataset for basic segmentation example'
-  def __init__(self, catdb, img_ids, label_ids, valid_classes=None, class_map=None, use_subclasses=True, preprocessing_fn=None):
+  def __init__(self, catdb, img_ids, label_ids, valid_classes, use_subclasses=False, preprocessing_fn=None):
     self.catdb = catdb
     self.img_ids = img_ids
     self.label_ids = label_ids
     self.valid_classes = valid_classes
     self.use_subclasses = use_subclasses
-    self.class_map = class_map
     
     self.augmentation = self._default_augmentation_fn()
     self.preprocessing = self._default_preprocessing_fn(preprocessing_fn)
@@ -75,55 +74,26 @@ class SegmentationDataset(torch.utils.data.Dataset):
 
     # Get classes that map to image intensity values
     classes_intensity_map, subclasses_intensity_map = get_label_name_maps(label_item)
+    if self.use_subclasses:
+      classes_intensity_map = subclasses_intensity_map
     
-    # If a class map exists... TO DO
-    if self.class_map is not None:
-      intensity_map = {}
-      for classname in self.valid_classes:
-        try:
-          if self.use_subclasses:
-            label_intensity_vals = subclasses_intensity_map[classname]
-          else:
-            label_intensity_vals = classes_intensity_map[classname]
-          masks.append(np.logical_or.reduce([mask == int(liv) for liv in label_intensity_vals]))
-        except:
-          pass
-        
-    # Extract each class from label data
-    masks = []
+    # Extract each class based on intensity from label data
+    masks = [(mask == 0)] # Add background in first
     for classname in self.valid_classes:
       try:
-        if self.use_subclasses:
-          label_intensity_vals = subclasses_intensity_map[classname]
-        else:
-          label_intensity_vals = classes_intensity_map[classname]
+        label_intensity_vals = classes_intensity_map[classname]
         masks.append(np.logical_or.reduce([mask == int(liv) for liv in label_intensity_vals]))
       except:
         # If this class doesn't exist in the sample, add an empty array of size(mask)
         masks.append(np.zeros_like(mask))
     mask = np.stack(masks, axis=-1).astype('float')
     
-    # Extract each class from label data
-    masks = []
-    for classname in self.valid_classes:
-      try:
-        if self.use_subclasses:
-          label_intensity_vals = subclasses_intensity_map[classname]
-        else:
-          label_intensity_vals = classes_intensity_map[classname]
-        masks.append(np.logical_or.reduce([mask == int(liv) for liv in label_intensity_vals]))
-      except:
-        # If this class doesn't exist in the sample, add an empty array of size(mask)
-        masks.append(np.zeros_like(mask))
-    mask = np.stack(masks, axis=-1).astype('float')
-
+    # Augment the (image, label) pair
+    #if self.augmentation:
+    #  sample = self.augmentation(image=image, mask=mask)
+    #  image, mask = sample['image'], sample['mask']
     
-    # apply augmentations
-    if self.augmentation:
-      sample = self.augmentation(image=image, mask=mask)
-      image, mask = sample['image'], sample['mask']
-    
-    # apply preprocessing
+    # Preprocess the (image, label) pair
     if self.preprocessing:
       sample = self.preprocessing(image=image, mask=mask)
       image, mask = sample['image'], sample['mask']

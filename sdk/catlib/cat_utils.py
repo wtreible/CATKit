@@ -22,8 +22,8 @@ def get_unique_classes(label_names_list, invalid_items=['-']):
   '''
   Returns unique valid class and subclass names from output of "read_label_names"
   '''
-  label_classes = [label_name_data[4] for label_name_data in label_names_list]
-  label_sub_classes = [label_name_data[5] for label_name_data in label_names_list]
+  label_classes = [label_name_data[4].strip() for label_name_data in label_names_list]
+  label_sub_classes = [label_name_data[5].strip() for label_name_data in label_names_list]
   unique_classes = np.unique(label_classes)
   unique_subclasses = np.unique(label_sub_classes)
   return  np.setdiff1d(unique_classes,invalid_items), np.setdiff1d(unique_subclasses,invalid_items)
@@ -48,3 +48,10 @@ def get_label_name_maps(label_item, invalid_items=['-'], keyname='label_names'):
     if label_name_data[5] not in invalid_items:
       subclasses_map = _try_append(subclasses_map, label_name_data[5], int(label_name_data[3]))
   return classes_map, subclasses_map
+  
+def img_float_to_uint8(image):
+  '''
+  Converts a float image to a uint8 image for saving
+  '''
+  return ((image-image.min())/(image.max()-image.min()) * 255.).astype(np.uint8)
+  

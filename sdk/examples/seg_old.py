@@ -19,7 +19,7 @@ from cat_utils import read_label_names, get_unique_classes, img_float_to_uint8
 
 # Set important paths and defaults
 EPOCHS = 40
-ENCODER = 'densenet161'#'se_resnext50_32x4d'
+ENCODER = 'se_resnext50_32x4d'
 ENCODER_WEIGHTS = 'imagenet'
 ACTIVATION = 'sigmoid'
 DEVICE = 'cuda'
@@ -30,23 +30,8 @@ os.makedirs(SCRATCH_BASEPATH, mode=0o777, exist_ok=True)
 #  For this example, only use "books" scene with the (raw, left, color, default)
 #  images that correspond to the label images
 catdb = CatDB()
-
-# Get Training Image IDs
-label_img_ids = catdb.multisearch('location','indoor',
-                                  'type', 'labels',
-                                  'label_names','!-',
-                                  'arrangement','!arrangement1',
-                                  'arrangement','!arrangement2')
-raw_img_ids = []
-for l_id in label_img_ids:
-  tmp_item = catdb[l_id]
-  raw_img_id = catdb.multisearch('arrangement',tmp_item['arrangement'],
-                                 'scene',tmp_item['scene'], 
-                                 'type', 'raw', 
-                                 'side', 'left', 
-                                 'hazard', 'default', 
-                                 'modality', 'color')
-  raw_img_ids.append(raw_img_id[0])
+raw_img_ids = catdb.multisearch('scene', 'books', 'type', 'raw', 'side', 'left', 'hazard', 'default', 'modality', 'color')
+label_img_ids = catdb.multisearch('scene', 'books', 'type', 'labels')
 assert(len(raw_img_ids) == len(label_img_ids))
 
 # Determine unique classes in the data
@@ -57,7 +42,7 @@ NUM_CLASSES = len(unique_classes) + 1 # Add in background
 print ("Unique Classes in the dataset: {}".format(unique_classes))
 
 # Build a pretrained model for finetuning
-model = smp.Unet(
+model = smp.FPN(
     encoder_name=ENCODER, 
     encoder_weights=ENCODER_WEIGHTS, 
     classes=NUM_CLASSES, 
@@ -69,7 +54,7 @@ preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
 seg_dataset = SegmentationDataset(catdb, raw_img_ids, label_img_ids, 
                                   valid_classes=unique_classes,
                                   preprocessing_fn=preprocessing_fn)
-train_loader = torch.utils.data.DataLoader(seg_dataset, batch_size=1, shuffle=True, num_workers=1)
+train_loader = torch.utils.data.DataLoader(seg_dataset, batch_size=1, shuffle=False, num_workers=1)
 
 # Save some images to verify augmentation is working
 for i in range(3):
@@ -106,7 +91,7 @@ for epoch in range(0, EPOCHS):
   train_logs = train_epoch.run(train_loader)
   if max_score < train_logs['iou_score']:
     max_score = train_logs['iou_score']
-    model_name = 'best_model_{}_{}.pth'.format(ENCODER, ENCODER_WEIGHTS) #'best_model_IoU-{}_E-{}.pth'.format(max_score, epoch)
+    model_name = 'best_model.pth' #'best_model_IoU-{}_E-{}.pth'.format(max_score, epoch)
     best_model_path = os.path.join(SCRATCH_BASEPATH, model_name)
     torch.save(model, best_model_path)
     print('Model saved!')
@@ -116,4 +101,23 @@ for epoch in range(0, EPOCHS):
     print('Changing Learning Rate...')
 
 
+# load best saved checkpoint and test image
+best_model = torch.load(best_model_path)
+test_image, test_mask = seg_dataset[0]
 
+# Convert test image to a tensor
+test_tensor = torch.from_numpy(np.expand_dims(test_image,0)).float().to(DEVICE)
+
+# Predict mask
+output = best_model.predict(test_tensor)
+
+# Save output segmentation image
+image = np.transpose(test_image, (1,2,0))
+mask = np.transpose(np.squeeze(output.cpu().numpy()), (1,2,0))
+image = img_float_to_uint8(image)
+intensity_mask = np.argmax(mask, axis=-1)
+rgb_mask = label2rgb(intensity_mask, image=image, bg_label=0)
+rgb_mask = img_float_to_uint8(rgb_mask)
+cv2.imwrite(os.path.join(SCRATCH_BASEPATH,'output_test.png'), rgb_mask)
+
+pdb.set_trace()

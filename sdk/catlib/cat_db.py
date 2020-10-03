@@ -1,13 +1,13 @@
-import sys
+import sys, pdb
 from os import listdir
-from os.path import isdir, realpath, dirname, splitext, join as joinpath
+from os.path import isdir, isfile, realpath, dirname, splitext, join as joinpath
 from collections.abc import MutableMapping
 
 class CatDB(MutableMapping): 
   
-  def __init__(self, basepath=None):
+  def __init__(self, basepath=None, missing_str='-'):
     self.db = {}
-    
+    self.missing_str = missing_str
     self.basepath = basepath if basepath else self._get_basepath()
     try:
       self._populate_db(self.basepath)
@@ -78,8 +78,8 @@ class CatDB(MutableMapping):
                       'arrangement' : arrangement,
                       'scene' : scene,
                       'location' : location,
-                      'path' : label_image_path,
-                      'label_names' : label_names_path,
+                      'path' : label_image_path if isfile(label_image_path) else self.missing_str,
+                      'label_names' : label_names_path if isfile(label_names_path) else self.missing_str,
                       'bbox' : bbox_path,
                       'crop' : crop_path,
                       'thumbnails' : thumbnails_path
@@ -153,7 +153,12 @@ class CatDB(MutableMapping):
     keyvalues = list(zip(keyvalues[0::2], keyvalues[1::2]))
     res = []
     for k, v in self.db.items():
-      l = [key in v.keys() and v[key] == value for key, value in keyvalues]
+      l = []
+      for key, value in keyvalues:
+        if value[0] == '!':
+          l.append(key in v.keys() and v[key] != value[1:])
+        else:
+          l.append(key in v.keys() and v[key] == value)
       if fn(l):
         res.append(k)
     return res
