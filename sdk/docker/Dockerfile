@@ -17,16 +17,20 @@ RUN apt-get install -y libglib2.0-0 \
 RUN pip3 install --upgrade pip
 
 # Install basic CV and ML tools
-RUN pip3 install setuptools \
- && pip3 install numpy \
- && pip3 install scikit-image \
- && pip3 install Pillow \
- && pip3 install torch \
- && pip3 install torchvision
+#RUN pip3 install setuptools \
+# && pip3 install numpy \
+# && pip3 install scikit-image \
+# && pip3 install Pillow \
+# && pip3 install torch \
+# && pip3 install torchvision
  
 # Install special python packages for ML
-RUN pip3 install segmentation_models_pytorch \
- && pip3 install albumentations
+#RUN pip3 install segmentation_models_pytorch \
+# && pip3 install albumentations
+
+# Install Python packages from requirements
+COPY requirements.txt /opt/requirements.txt
+RUN pip3 install -r /opt/requirements.txt
 
 RUN echo '#!/bin/bash\npython3 "$@"' > /usr/bin/python \
  && chmod +x /usr/bin/python
