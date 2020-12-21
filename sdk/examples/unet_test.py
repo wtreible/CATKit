@@ -19,15 +19,17 @@ from cat_utils import read_label_names, get_unique_classes, img_float_to_uint8
 
 # Set important paths and defaults
 EPOCHS = 40
-ENCODER = 'densenet161' #'se_resnext50_32x4d'
-MODEL_NAME = 'best_model_densenet161_imagenet.pth'
+ENCODERS = ['se_resnext50_32x4d', 'densenet161', 'resnet50', 'efficientnet-b5', 'timm-efficientnet-b5	']
+MODELS = ['unet
+ENCODER = 'se_resnext50_32x4d'
+BEST_MODEL_PATH = 'best_model_' + ENCODER + '_imagenet.pth'
 ENCODER_WEIGHTS = 'imagenet'
 ACTIVATION = 'sigmoid'
 DEVICE = 'cuda'
 SCRATCH_BASEPATH = '/sdk/scratch/segmentation/examples'
 os.makedirs(SCRATCH_BASEPATH, mode=0o777, exist_ok=True)
 
-unique_classes = ['Book', 'Cloth', 'Container', 'Cork', 'Lamp','Metal', 'Pen', 'Plant', 'Rock', 'Statue', 'Styrofoam', 'Wood']
+unique_classes = ['Book', 'Cloth', 'Container', 'Cork', 'Lamp', 'Metal', 'Pen', 'Plant', 'Rock', 'Statue', 'Styrofoam', 'Wood']
 
 # If a colors file was supplied, load it from disk
 colors_file_path = 'colors.csv'
@@ -90,7 +92,7 @@ seg_dataset = SegmentationDataset(catdb, raw_img_ids, label_img_ids,
                                   preprocessing_fn=preprocessing_fn)
 
 # load best saved checkpoint and test image
-best_model_path = os.path.join(SCRATCH_BASEPATH, MODEL_NAME)
+best_model_path = os.path.join(SCRATCH_BASEPATH, BEST_MODEL_PATH)
 best_model = torch.load(best_model_path)
 for i in range(len(seg_dataset)):
   test_image, test_mask = seg_dataset[i]
