@@ -92,6 +92,7 @@ class CatDB(MutableMapping):
                     for modality in [mx for mx in listdir(gt_type_path) if mx in ['color', 'cross', 'thermal']]:
                         disp_path = joinpath(gt_type_path, modality)
                         disp_item = {
+                          'name' : '{}_{}'.format(gt_type, modality),
                           'type' : gt_type,
                           'modality' : modality,
                           'arrangement' : arrangement,
