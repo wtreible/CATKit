@@ -1,6 +1,53 @@
 import csv
 import numpy as np
+
+###################
+# Image Functions #
+###################
+
+def img_float_to_uint8(image):
+  '''
+  Converts a float image to a uint8 image for saving
+  '''
+  return ((image-image.min())/(image.max()-image.min()) * 255.).astype(np.uint8)
+
+###################
+# Print Functions #
+###################
+def pprint(d, indent=0, indent_size=2):
+  '''
+  Pretty prints a dictionary
+  '''
+  indent_str = ' ' * indent_size
+  for key, value in d.items():
+    print(indent_str * indent + str(key))
+    if isinstance(value, dict):
+      pprint(value, indent=indent+1, indent_size=indent_size)
+    else:
+      print(indent_str * (indent+1) + str(value))
+
+def mdprint(*items, keys=[], sep=':', item_start='', item_end=' ', end='\n'):
+  '''
+  Multi-descriptor print: 
+    > Prints multiple values from a dictionary for the given set of keys 
+    > Values are separated by 'sep'
+    > Items are separated by 'end'
+  '''
+  tmp_str = ''
+  for item in items:
+    tmp_str += item_start
+    for key in keys:
+      tmp_str += item[key] + sep
+    tmp_str = tmp_str[:-len(sep)]
+    tmp_str += item_end
+  tmp_str = tmp_str[:-len(item_end)] + end
+  print(tmp_str)
   
+  
+
+##########################################
+# Semantic Segmentation Helper Functions #
+##########################################
 def read_label_names(label_items, keyname='label_names'):
   '''
   Reads label names CSVs for semantic segmentation labels
@@ -48,35 +95,8 @@ def get_label_name_maps(label_item, invalid_items=['-'], keyname='label_names'):
     if label_name_data[5] not in invalid_items:
       subclasses_map = _try_append(subclasses_map, label_name_data[5], int(label_name_data[3]))
   return classes_map, subclasses_map
-  
-def img_float_to_uint8(image):
-  '''
-  Converts a float image to a uint8 image for saving
-  '''
-  return ((image-image.min())/(image.max()-image.min()) * 255.).astype(np.uint8)
-  
-def pprint(d, indent=0, indent_size=2):
-  '''
-  Pretty prints a dictionary
-  '''
-  indent_str = ' ' * indent_size
-  for key, value in d.items():
-    print(indent_str * indent + str(key))
-    if isinstance(value, dict):
-      pprint(value, indent=indent+1, indent_size=indent_size)
-    else:
-      print(indent_str * (indent+1) + str(value))
 
-def mdprint(*items, keys=[], sep=':', end=' '):
-  '''
-  Multi-descriptor print: 
-    > Prints multiple values from a dictionary for the given set of keys 
-    > Values are separated by 'sep'
-    > Items are separated by 'end'
-  '''
-  tmp_str = ''
-  for item in items:
-    for key in keys:
-      tmp_str += item[key] + sep
-    tmp_str = tmp_str[:-len(sep)] + end
-  print(tmp_str)
+
+
+
+

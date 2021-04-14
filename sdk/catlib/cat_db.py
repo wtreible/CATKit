@@ -7,6 +7,7 @@ class CatDB(MutableMapping):
   
   def __init__(self, basepath=None, missing_str='-'):
     self.db = {}
+    self.metadb = {}
     self.missing_str = missing_str
     self.basepath = basepath if basepath else self._get_basepath()
     try:
@@ -14,20 +15,33 @@ class CatDB(MutableMapping):
     except FileNotFoundError:
       sys.exit("No CATS data found at {}... exiting.".format(self.basepath))
 
+  '''
+  Private Methods
+  '''
+  def _add_to_metadb(self, key, value):
+    try:
+      self.metadb[key].append(value) if value not in self.metadb[key] else None
+    except:
+      self.metadb[key] = [value]
+
   def _get_basepath(self):
     return joinpath(dirname(dirname(dirname(realpath(__file__)))), 'data')
     
   def _populate_db(self, basepath):
     item_id = 0
     for location in listdir(basepath):
+      self._add_to_metadb('location', location)
       location_path = joinpath(basepath, location)
       for scene in listdir(location_path):
+        self._add_to_metadb('scene', scene)
+        self._add_to_metadb('{}_scene'.format(location), scene)
         scene_path = joinpath(location_path, scene)
         for arrangement in listdir(scene_path):
           arrangement_path = joinpath(scene_path, arrangement)
           if arrangement == 'params':
             # Handle Scene Params
             for modality in listdir(arrangement_path):
+              self._add_to_metadb('modality', modality)
               modality_path = joinpath(arrangement_path, modality)
               if isdir(modality_path):
                 for item in listdir(modality_path):
@@ -45,12 +59,14 @@ class CatDB(MutableMapping):
                   item_id += 1
           else:
             # Handle Arrangements
+            self._add_to_metadb('arrangement', arrangement)
             for data_type in listdir(arrangement_path):
+              self._add_to_metadb('data_type', data_type)
               data_type_path = joinpath(arrangement_path, data_type)
               if data_type == 'gt':
-              
                 # Handle Ground Truth Data
                 for gt_type in listdir(data_type_path):
+                  self._add_to_metadb('gt_type', gt_type)
                   gt_type_path = joinpath(data_type_path, gt_type)
                   
                   # Ground Truth Point Data
@@ -106,17 +122,33 @@ class CatDB(MutableMapping):
                         item_id += 1
                   
               elif data_type == 'derived':
-                # Skip derived data for now...
-                pass
+                # Handle Derived Data
+                for derived_type in listdir(data_type_path):
+                  self._add_to_metadb('derived_type', derived_type)
+                  derived_type_path = joinpath(data_type_path, derived_type)
+                  if derived_type == "left_ct_aligned":
+                    derived_item = {
+                      'type' : derived_type,
+                      #'derived_type' : derived_type,
+                      'arrangement' : arrangement,
+                      'scene' : scene,
+                      'location' : location,
+                      'path' : derived_type_path
+                    }
+                    self.db[item_id] = derived_item
+                    item_id += 1
+
               else:
                 for modality in listdir(data_type_path):
                   modality_path = joinpath(data_type_path, modality)
                   for item in listdir(modality_path):
+                    self._add_to_metadb('item', item)
                     item_path = joinpath(modality_path, item)
                     item_name = splitext(item)[0]
                     if item_name == 'mask':
                       # Handle Rectification Masks
                       mask_item = {
+                        'name' : '{}_{}'.format(item_name, modality),
                         'type' : item_name,
                         'arrangement' : arrangement,
                         'modality' : modality,
@@ -163,6 +195,9 @@ class CatDB(MutableMapping):
       if fn(l):
         res.append(k)
     return res
+  
+  def get_metadb(self):
+    return self.metadb
   
   def __getitem__(self, key):
     if type(key) in [list,tuple]:
